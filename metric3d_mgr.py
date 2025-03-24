@@ -18,14 +18,28 @@ from pathlib import Path
 import time  # Ensure this import is at the top of the file
 
 import numpy as np
-from scripts.metric import Metric3D  # Adjust the module name as needed
+import onnxruntime as ort
+# from scripts.metric import Metric3D  # Adjust the module name as needed
 
 class Metric3dMgr(object):
     def __init__(self):
         self.model = None
+        self.use_onnx = True
         return
     def init_model(self, model_name='metric3d_vit_giant2'):
         if self.model is not None:
+            return
+        if self.use_onnx:
+            onnx_model="/media/levin/DATA/checkpoints/droid_metric/metric3d_vit_small.onnx"
+            # onnx_model="/media/levin/DATA/checkpoints/droid_metric/metric3d_vit_small.onnx"
+            # providers = [
+            #     (
+            #         "CUDAExecutionProvider",
+            #         {"cudnn_conv_use_max_workspace": "0", "device_id": str(0)},
+            #     )
+            # ]
+            providers = [("TensorrtExecutionProvider", {'trt_engine_cache_enable': True, 'trt_fp16_enable': True, 'device_id': 0, 'trt_dla_enable': False})]
+            self.model = ort.InferenceSession(onnx_model, providers=providers)
             return
         # Use torch.hub.load to load the model from a local directory
         local_repo = str(Path(__file__).parent)  # Get the current file's directory
@@ -33,9 +47,9 @@ class Metric3dMgr(object):
         model.cuda().eval()
         self.model = model
         return
-    def infer(self,rgb_image, intr):
-        depth = self.metric(rgb_image=rgb_image, intrinsic=intr, d_max=self.d_max)
-        return depth
+    # def infer(self,rgb_image, intr):
+    #     depth = self.metric(rgb_image=rgb_image, intrinsic=intr, d_max=self.d_max)
+    #     return depth
 
     def prepare_input(self, rgb_origin: np.ndarray, input_size: tuple = (616, 1064)) -> tuple:
         """
@@ -67,6 +81,9 @@ class Metric3dMgr(object):
         rgb = cv2.copyMakeBorder(rgb, pad_h_half, pad_h - pad_h_half, pad_w_half, pad_w - pad_w_half, cv2.BORDER_CONSTANT, value=padding)
         pad_info = [pad_h_half, pad_h - pad_h_half, pad_w_half, pad_w - pad_w_half]
 
+        if self.use_onnx:
+            return rgb, pad_info, scale
+
         # Normalize
         mean = torch.tensor([123.675, 116.28, 103.53]).float()[:, None, None]
         std = torch.tensor([58.395, 57.12, 57.375]).float()[:, None, None]
@@ -81,8 +98,18 @@ class Metric3dMgr(object):
 
         ###################### canonical camera space ######################
         start_time = time.time()  # Start timing
-        with torch.no_grad():
-            pred_depth, confidence, output_dict = self.model.inference({'input': rgb})
+        if self.use_onnx:
+            onnx_input = {
+            "pixel_values": np.ascontiguousarray(
+                np.transpose(rgb, (2, 0, 1))[None], dtype=np.float32
+            ),  # 1, 3, H, W
+    }
+            outputs = self.model.run(None, onnx_input)
+            pred_depth = outputs[0].squeeze()  # [H, W]
+            pred_depth = torch.from_numpy(pred_depth).cuda()
+        else:
+            with torch.no_grad():
+                pred_depth, confidence, output_dict = self.model.inference({'input': rgb})
         print(f"Model inference duration: {time.time() - start_time:.3f} seconds")  # Print the duration with 3-digit precision
 
         # un pad
@@ -100,18 +127,18 @@ class Metric3dMgr(object):
         return pred_depth
 
     def run(self):
-        self.init_model()
+        self.init_model( model_name='metric3d_vit_small')
         #### prepare data
         rgb_file = '/media/levin/DATA/zf/nerf/2024_0601/scenes/5/rgb/es81_sur_back/rgb_00655_sur_back.jpg'
-        depth_file = '/media/levin/DATA/zf/nerf/2024_0601/scenes/5/metrics3d_depth_1/sur_back/rgb_00655_sur_back.npy'
+        depth_file = 'small_torch.npy'
         intrinsic = [1081.695079, 1081.019193, 950.014133, 557.173103]
         gt_depth_scale = 256.0
         rgb_origin = cv2.imread(rgb_file)[:, :, ::-1]
 
        
         pred_depth = self.infer_depth(rgb_origin, intrinsic)
-        #save predicted depth
-        # np.save('pred_depth.npy', pred_depth.cpu().numpy())
+        # save predicted depth
+        # np.save('small_torch.npy', pred_depth.cpu().numpy())
 
         #### you can now do anything with the metric depth 
         # such as evaluate predicted depth
