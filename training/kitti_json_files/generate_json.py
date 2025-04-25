@@ -1,9 +1,9 @@
 import os
 import json
 
-common_root = 'd:/Datasets'
-depth_root = 'kitti/kitti_depth/depth/data_depth_annotated'
-raw_root = 'kitti_raw/kitti_raw'
+common_root = '/media/levin/DATA/nerf/public_depth/kitti'
+depth_root = 'data_depth_annotated'
+raw_root = 'raw_data'
 
 #print(os.listdir(os.path.join(common_root, raw_root)))
 
@@ -15,7 +15,7 @@ test_file_list = []
 train_file_dict = {}
 
 
-with open('D:/Datasets/eigen_train.txt') as f:
+with open('/home/levin/workspace/nerf/tools/Metric3D/training/kitti_json_files/eigen_train.txt') as f:
     lines_train = f.readlines()
 
 cnt = 0

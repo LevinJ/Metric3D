@@ -275,12 +275,20 @@ db_info['ScanNet'] = {
     'val_annotations_path': 'ScanNet/ScanNet/annotations/test.json',
 }
 # KITTI, RGBD dataset
+# db_info['KITTI'] = {
+#     'db_root': '/media/levin/DATA/nerf/public_depth/kitti',
+#     'data_root': '',
+#     'train_annotations_path': 'eigen_train.json',
+#     'test_annotations_path': 'eigen_val.json',
+#     'val_annotations_path': 'eigen_val.json',
+# }
+#for test kitti
 db_info['KITTI'] = {
-    'db_root': 'tbd_data_root',
+    'db_root': '/home/levin/workspace/nerf/tools/Metric3D',
     'data_root': '',
-    'train_annotations_path': 'KITTI/KITTI/annotations/eigen_train.json',
-    'test_annotations_path': 'KITTI/KITTI/annotations/eigen_test.json',
-    'val_annotations_path': 'KITTI/KITTI/annotations/eigen_test.json',
+    'train_annotations_path': 'data/kitti_demo/test_annotations.json',
+    'test_annotations_path': 'data/kitti_demo/test_annotations.json',
+    'val_annotations_path': 'data/kitti_demo/test_annotations.json',
 }
 
 

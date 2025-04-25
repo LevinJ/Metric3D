@@ -27,8 +27,8 @@ def save_raw_imgs(
 def save_normal_val_imgs(
     iter: int, 
     pred: torch.tensor, 
-    #targ: torch.tensor, 
-    #rgb: torch.tensor, 
+    targ: torch.tensor, 
+    rgb: torch.tensor, 
     filename: str, 
     save_dir: str, 
     tb_logger=None, 

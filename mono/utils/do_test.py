@@ -286,7 +286,7 @@ def do_scalecano_test_with_custom_data(
             )
 
     #if gt_depth_flag:
-    if False:
+    if True:
         eval_error = dam.get_metrics()
         print('w/o match :', eval_error)
 

@@ -15,6 +15,10 @@ model=dict(
     ),
 )
 
+dist_params=dict(
+    nnodes=1,
+    node_rank=0)
+
 # loss method
 losses=dict(
     decoder_losses=[
@@ -44,24 +48,26 @@ data_basic=dict(
 #     crop_size=(544, 1216),
 #     crop_size = (544, 992),
     crop_size = (616, 1064),  # %28 = 0
+    clip_depth_range=(0.1, 200),
 ) 
 
 # online evaluation
 # evaluation = dict(online_eval=True, interval=1000, metrics=['abs_rel', 'delta1', 'rmse'], multi_dataset_eval=True)
 #log_interval = 100
 
-interval = 4000
-log_interval = 100
+# interval = 4000
+interval = 20
+log_interval = 5
 evaluation = dict(
-    online_eval=False, 
+    online_eval=True, 
     interval=interval, 
     metrics=['abs_rel', 'delta1', 'rmse', 'normal_mean', 'normal_rmse', 'normal_a1'], 
-    multi_dataset_eval=True,
+    multi_dataset_eval=False,
     exclude=['DIML_indoor', 'GL3D', 'Tourism', 'MegaDepth'],
 )
 
 # save checkpoint during training, with '*_AMP' is employing the automatic mix precision training
-checkpoint_config = dict(by_epoch=False, interval=interval)
+checkpoint_config = dict(by_epoch=False, interval=interval*100)
 runner = dict(type='IterBasedRunner_AMP', max_iters=20010)
 
 # optimizer

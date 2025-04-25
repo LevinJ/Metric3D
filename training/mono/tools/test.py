@@ -26,11 +26,12 @@ from mono.utils.db import load_data_info, reset_ckpt_path
 from mono.model.monodepth_model import get_configured_monodepth_model
 from mono.datasets.distributed_sampler import build_dataset_n_sampler_with_cfg
 from mono.utils.running import load_ckpt
-from mono.utils.do_test import do_test_with_dataloader, do_test_check_data
+from mono.utils.do_test import do_test_with_dataloader
+from pathlib import Path
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a segmentor')
-    parser.add_argument('config', help='train config file path')
+    parser.add_argument('--config', help='train config file path')
     parser.add_argument('--show-dir', help='the dir to save logs and visualization results')
     parser.add_argument(
         '--load-from', help='the checkpoint file to load weights from')
@@ -45,6 +46,12 @@ def parse_args():
         '--launcher', choices=['None', 'pytorch', 'slurm'], default='slurm',
         help='job launcher')
     args = parser.parse_args()
+    metric3d_dir = Path(__file__).resolve().parents[3]
+
+    args.config = f'{metric3d_dir}/mono/configs/HourglassDecoder/vit.raft5.small.py'
+    args.load_from = f'{metric3d_dir}/weights/metric_depth_vit_small_800k.pth'
+    # args.test_data_path = f'{metric3d_dir}/data/kitti_demo/test_annotations.json'
+    args.launcher = 'None'
     return args
 
         

@@ -1,5 +1,6 @@
 import os
 import os.path as osp
+from pickletools import ArgumentDescriptor
 import time
 import sys
 CODE_SPACE=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -32,7 +33,7 @@ from mono.utils.do_train import do_train
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a segmentor')
-    parser.add_argument('config', help='train config file path')
+    parser.add_argument('--config', help='train config file path')
     parser.add_argument('--work-dir', help='the dir to save logs and models')
     parser.add_argument('--tensorboard-dir', help='the dir to save tensorboard logs')
     parser.add_argument(
@@ -74,6 +75,17 @@ def parse_args():
                         help='rank')  
     parser.add_argument('--experiment_name', default='debug', help='the experiment name for mlflow')
     args = parser.parse_args()
+
+    from pathlib import Path
+    metric3d_dir = Path(__file__).resolve().parents[3]
+
+    args.config =  '/home/levin/workspace/nerf/tools/Metric3D/training/mono/configs/RAFTDecoder/vit.raft5.large.kitti.py'
+    args.load_from = f'{metric3d_dir}/weights/metric_depth_vit_large_800k.pth'
+    args.use_tensorboard = True
+    args.resume_from = None
+    # args.test_data_path = f'{metric3d_dir}/data/kitti_demo/test_annotations.json'
+    args.launcher = 'None'
+    args.experiment_name = 'set1'
     return args
 
   
@@ -100,6 +112,8 @@ def main(args):
     cfg.dist_params.nnodes = args.nnodes
     cfg.dist_params.node_rank = args.node_rank
     cfg.deterministic = args.deterministic
+    cfg.resume_from = args.resume_from
+    cfg.use_tensorboard = args.use_tensorboard
     if args.options is not None:
         cfg.merge_from_dict(args.options)
     # set cudnn_benchmark
@@ -198,7 +212,7 @@ def main(args):
             main_worker(args.local_rank, cfg, args.launcher)
 
 def main_worker(local_rank: int, cfg: dict, launcher: str='slurm'):
-    logger = setup_logger(cfg.log_file)
+    logger = logging.getLogger()
     if cfg.distributed:
         if launcher == 'slurm':
             torch.set_num_threads(8) # without it, the spawn method is much slower than the launch method 

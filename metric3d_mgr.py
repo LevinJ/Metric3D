@@ -31,7 +31,7 @@ class Metric3dMgr(object):
             return
         if self.use_onnx:
             onnx_model="/media/levin/DATA/checkpoints/droid_metric/metric3d_vit_small.onnx"
-            # onnx_model="/media/levin/DATA/checkpoints/droid_metric/metric3d_vit_small.onnx"
+            # onnx_model="/media/levin/DATA/checkpoints/droid_metric/metric_depth_vit_giant2__fp16.onnx"
             # providers = [
             #     (
             #         "CUDAExecutionProvider",
@@ -129,9 +129,28 @@ class Metric3dMgr(object):
     def run(self):
         self.init_model( model_name='metric3d_vit_small')
         #### prepare data
-        rgb_file = '/media/levin/DATA/zf/nerf/2024_0601/scenes/5/rgb/es81_sur_back/rgb_00655_sur_back.jpg'
-        depth_file = 'small_torch.npy'
-        intrinsic = [1081.695079, 1081.019193, 950.014133, 557.173103]
+
+        #sur_back camera
+        # rgb_file = '/media/levin/DATA/zf/nerf/2024_0601/scenes/5/rgb/es81_sur_back/rgb_00655_sur_back.jpg'
+        # depth_file = 'small_torch.npy'
+        # intrinsic = [1081.695079, 1081.019193, 950.014133, 557.173103]
+
+        #front wide camera
+        rgb_file = "/media/levin/DATA/nerf/new_es8/20250311/levin/03_11-15/rgb/front_wide/rgb_00772_front_wide.jpg"
+        depth_file = None
+        intrinsic = np.loadtxt("/media/levin/DATA/nerf/cameras/cam_front_wide_intrinsics.txt").reshape(3, 3)
+        fx, fy = intrinsic[0, 0], intrinsic[1, 1]
+        cx, cy = intrinsic[0, 2], intrinsic[1, 2]
+        intrinsic = [fx, fy, cx, cy]
+
+
+
+        #left stereo
+        # rgb_file = '/home/levin/workspace/nerf/tools/FoundationStereo/output/rbg.png'
+        # depth_file = '/home/levin/workspace/nerf/tools/FoundationStereo/output/depth_meter.npy'
+        # intrinsic =  [1049.68408203125, 1049.68408203125, 998.2841796875, 589.4127197265625]
+
+
         gt_depth_scale = 256.0
         rgb_origin = cv2.imread(rgb_file)[:, :, ::-1]
 
@@ -155,6 +174,15 @@ class Metric3dMgr(object):
             mask = (gt_depth > 1e-8)
             abs_rel_err = (torch.abs(pred_depth[mask] - gt_depth[mask]) / gt_depth[mask]).mean()
             print('abs_rel_err:', abs_rel_err.item())
+        
+        from Utils import process_and_visualize_point_cloud
+        depth = pred_depth.cpu().numpy()
+        img0_ori = rgb_origin
+        out_dir = "temp/point_cloud"
+        z_far = 100.0
+        denoise_cloud = False
+        K = np.array([[intrinsic[0], 0, intrinsic[2]], [0, intrinsic[1], intrinsic[3]], [0, 0, 1]])
+        process_and_visualize_point_cloud(depth, K, img0_ori, out_dir, z_far, denoise_cloud)
 
         #### normal are also available
         # if 'prediction_normal' in output_dict: # only available for Metric3Dv2, i.e. vit model

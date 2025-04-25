@@ -29,7 +29,7 @@ from mono.utils.custom_data import load_from_annos, load_data
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a segmentor')
-    parser.add_argument('config', help='train config file path')
+    parser.add_argument('--config', help='train config file path')
     parser.add_argument('--show-dir', help='the dir to save logs and visualization results')
     parser.add_argument('--load-from', help='the checkpoint file to load weights from')
     parser.add_argument('--node_rank', type=int, default=0)
@@ -39,6 +39,11 @@ def parse_args():
     parser.add_argument('--test_data_path', default='None', type=str, help='the path of test data')
     parser.add_argument('--batch_size', default=1, type=int, help='the batch size for inference')
     args = parser.parse_args()
+    metric3d_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    args.config = f'{metric3d_dir}/mono/configs/HourglassDecoder/vit.raft5.large.py'
+    args.load_from = f'{metric3d_dir}/weights/metric_depth_vit_large_800k.pth'
+    args.test_data_path = f'{metric3d_dir}/data/kitti_demo/test_annotations.json'
+    args.launcher = 'None'
     return args
 
 def main(args):

@@ -3,7 +3,7 @@ db_info={}
 
 
 db_info['checkpoint']={
-    'db_root': 'tbd_weight_root', # Config your weight root!
+    'db_root': '/media/levin/DATA/checkpoints/droid_metric', # Config your weight root!
 
     # pretrained weight for vit
     'vit_small_reg':  'vit/dinov2_vits14_reg4_pretrain.pth',

@@ -3,3 +3,12 @@ show_dirs
 *__pycache__*
 test_dataloader_*
 *.onnx
+.vscode/
+TensorrtExecutionProvider_TRTKernel_graph_*
+normal_vis.png
+small.npy
+small_onnx.npy
+small_torch.npy
+temp/
+test.py
+training/kitti_json_files/eigen_train.json_old
