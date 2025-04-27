@@ -83,7 +83,6 @@ def parse_args():
     args.load_from = f'{metric3d_dir}/weights/metric_depth_vit_large_800k.pth'
     args.use_tensorboard = True
     args.resume_from = None
-    # args.test_data_path = f'{metric3d_dir}/data/kitti_demo/test_annotations.json'
     args.launcher = 'None'
     args.experiment_name = 'set1'
     return args
@@ -116,6 +115,8 @@ def main(args):
     cfg.use_tensorboard = args.use_tensorboard
     if args.options is not None:
         cfg.merge_from_dict(args.options)
+
+    
     # set cudnn_benchmark
     #if cfg.get('cudnn_benchmark', False) and args.launcher != 'ror':
     #    torch.backends.cudnn.benchmark = True
@@ -183,6 +184,18 @@ def main(args):
     data_info = {}
     load_data_info('data_server_info', data_info=data_info)
     cfg.db_info = data_info
+
+    #for ZED stereo camera
+    cfg['KITTI_dataset'].metric_scale = 1.0
+    cfg['KITTI_dataset'].zed_camera = True
+    cfg.db_info['KITTI'] = {
+                        'db_root': '/media/levin/DATA/nerf/new_es8/stereo_20250331/20250331/jiuting_campus/annotation',
+                        'data_root': '',
+                        'train_annotations_path': 'zed_annotation.json',
+                        'test_annotations_path': 'zed_annotation.json',
+                        'val_annotations_path': 'zed_annotation.json',
+                    }
+
     # update check point info
     reset_ckpt_path(cfg.model, data_info)
 

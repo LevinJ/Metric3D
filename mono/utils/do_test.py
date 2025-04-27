@@ -236,7 +236,10 @@ def do_scalecano_test_with_custom_data(
             rgb_origins.append(rgb_origin)
             gt_depth = None
             if an['depth'] is not None:
-                gt_depth = cv2.imread(an['depth'], -1)
+                if os.path.splitext(an['depth'])[1] == '.npy':
+                    gt_depth = np.load(an['depth'])
+                else:
+                    gt_depth = cv2.imread(an['depth'], -1)
                 gt_depth_scale = an['depth_scale']
                 gt_depth = gt_depth / gt_depth_scale
             gt_depths.append(gt_depth)

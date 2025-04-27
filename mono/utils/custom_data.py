@@ -3,7 +3,7 @@ import os
 import json
 import cv2
 
-def load_from_annos(anno_path):
+def load_from_annos(anno_path, db_root = ''):
     with open(anno_path, 'r') as f:
         annos = json.load(f)['files']
 
@@ -14,6 +14,13 @@ def load_from_annos(anno_path):
         depth_scale = anno['depth_scale'] if 'depth_scale' in anno else 1.0
         intrinsic = anno['cam_in'] if 'cam_in' in anno else None
         normal = anno['normal'] if 'normal' in anno else None
+
+        # Prepend db_root to rgb
+        rgb = os.path.join(db_root, rgb)
+
+        # Prepend db_root to depth only if it's not None
+        if depth is not None:
+            depth = os.path.join(db_root, depth)
 
         data_i = {
             'rgb': rgb,

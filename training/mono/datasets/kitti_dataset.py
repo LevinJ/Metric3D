@@ -19,6 +19,8 @@ class KITTIDataset(BaseDataset):
         self.metric_scale = cfg.metric_scale
     
     def get_data_for_trainval(self, idx: int):
+        if hasattr(self.cfg, 'zed_camera') and self.cfg.zed_camera:
+            return super().get_data_for_trainval(idx)  # Call the parent class's method
         anno = self.annotations['files'][idx]
         meta_data = self.load_meta_data(anno)
         
@@ -29,7 +31,9 @@ class KITTIDataset(BaseDataset):
 
         curr_rgb, curr_depth, curr_normal, curr_sem, curr_cam_model = data_batch['curr_rgb'], data_batch['curr_depth'], data_batch['curr_normal'], data_batch['curr_sem'], data_batch['curr_cam_model']
         #curr_stereo_depth = data_batch['curr_stereo_depth']
+        curr_intrinsic = meta_data['cam_in']
         
+        # if (not hasattr(self.cfg, 'zed_camera')) or (not self.cfg.zed_camera):
         th = 352 # target size for bottom cropping, a common practice for kitti training
         tw = 1216
 
@@ -40,7 +44,7 @@ class KITTIDataset(BaseDataset):
         w_start = (cw - tw) // 2
         w_end = w_start + tw
 
-        curr_intrinsic = meta_data['cam_in']
+        
 
         curr_rgb = curr_rgb[h_start:, w_start:w_end, :]
         curr_depth = curr_depth[h_start:, w_start:w_end]
@@ -107,6 +111,8 @@ class KITTIDataset(BaseDataset):
 
 
     def get_data_for_test(self, idx: int):
+        if hasattr(self.cfg, 'zed_camera') and self.cfg.zed_camera:
+            return super().get_data_for_test(idx)  # Call the parent class's method
         anno = self.annotations['files'][idx]
         meta_data = self.load_meta_data(anno)
         curr_rgb_path = os.path.join(self.data_root, meta_data['rgb'])
@@ -166,6 +172,9 @@ class KITTIDataset(BaseDataset):
         return data
     
     def process_depth(self, depth, rgb):
+        if hasattr(self.cfg, 'zed_camera') and self.cfg.zed_camera:
+            return super().process_depth(depth, rgb)  # Call the parent class's method
+        # crop the depth map
         new_depth = np.zeros_like(depth)
         H, W = depth.shape
         crop_h_up = int(0.3324324 * H)

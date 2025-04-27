@@ -24,7 +24,7 @@ import onnxruntime as ort
 class Metric3dMgr(object):
     def __init__(self):
         self.model = None
-        self.use_onnx = True
+        self.use_onnx = False
         return
     def init_model(self, model_name='metric3d_vit_giant2'):
         if self.model is not None:
@@ -38,7 +38,10 @@ class Metric3dMgr(object):
             #         {"cudnn_conv_use_max_workspace": "0", "device_id": str(0)},
             #     )
             # ]
-            providers = [("TensorrtExecutionProvider", {'trt_engine_cache_enable': True, 'trt_fp16_enable': True, 'device_id': 0, 'trt_dla_enable': False})]
+            providers = [("TensorrtExecutionProvider", {'trt_engine_cache_enable': True, 
+                                                        'trt_fp16_enable': True, 'device_id': 0, 
+                                                        'trt_dla_enable': False,
+                                                        'trt_engine_cache_path' : '/home/levin/workspace/ros_projects/src/vslam_localization/scripts/nerf/road_reconstruction'})]
             self.model = ort.InferenceSession(onnx_model, providers=providers)
             return
         # Use torch.hub.load to load the model from a local directory
@@ -127,7 +130,7 @@ class Metric3dMgr(object):
         return pred_depth
 
     def run(self):
-        self.init_model( model_name='metric3d_vit_small')
+        self.init_model( model_name='metric3d_vit_large')
         #### prepare data
 
         #sur_back camera
@@ -136,19 +139,21 @@ class Metric3dMgr(object):
         # intrinsic = [1081.695079, 1081.019193, 950.014133, 557.173103]
 
         #front wide camera
-        rgb_file = "/media/levin/DATA/nerf/new_es8/20250311/levin/03_11-15/rgb/front_wide/rgb_00772_front_wide.jpg"
-        depth_file = None
-        intrinsic = np.loadtxt("/media/levin/DATA/nerf/cameras/cam_front_wide_intrinsics.txt").reshape(3, 3)
-        fx, fy = intrinsic[0, 0], intrinsic[1, 1]
-        cx, cy = intrinsic[0, 2], intrinsic[1, 2]
-        intrinsic = [fx, fy, cx, cy]
+        # rgb_file = "/media/levin/DATA/nerf/new_es8/20250311/levin/03_11-15/rgb/front_wide/rgb_00772_front_wide.jpg"
+        # depth_file = None
+        # intrinsic = np.loadtxt("/media/levin/DATA/nerf/cameras/cam_front_wide_intrinsics.txt").reshape(3, 3)
+        # fx, fy = intrinsic[0, 0], intrinsic[1, 1]
+        # cx, cy = intrinsic[0, 2], intrinsic[1, 2]
+        # intrinsic = [fx, fy, cx, cy]
 
 
 
         #left stereo
-        # rgb_file = '/home/levin/workspace/nerf/tools/FoundationStereo/output/rbg.png'
-        # depth_file = '/home/levin/workspace/nerf/tools/FoundationStereo/output/depth_meter.npy'
-        # intrinsic =  [1049.68408203125, 1049.68408203125, 998.2841796875, 589.4127197265625]
+        folder ='/media/levin/DATA/nerf/new_es8/stereo_20250331/20250331/jiuting_campus/annotation/'
+        file_name = '20250331_111636.639_10'
+        rgb_file = f'{folder}/rgb/{file_name}.png'
+        depth_file = f'{folder}/depth/{file_name}.npy'
+        intrinsic =  [1049.68408203125, 1049.68408203125, 998.2841796875, 589.4127197265625]
 
 
         gt_depth_scale = 256.0

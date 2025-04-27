@@ -46,7 +46,7 @@ class CustomerMultiDataSampler(torch.utils.data.Sampler):
 
     def __iter__(self):
         self.create_samplers() 
-        self.logger.info("Sample list of {} in rank {} is: {}".format(self.phase, self.global_rank, ' '.join(map(str, self.sample_indices_array[-20: -10]))))
+        # self.logger.info("Sample list of {} in rank {} is: {}".format(self.phase, self.global_rank, ' '.join(map(str, self.sample_indices_array[-20: -10]))))
         # subsample, each rank sample a subset for training.
         rank_offset = self.each_gpu_size * self.global_rank
         rank_indices = self.sample_indices_array[rank_offset : rank_offset + self.each_gpu_size]
@@ -118,9 +118,9 @@ class CustomerMultiDataSampler(torch.utils.data.Sampler):
                 # the original sample list for the dataset_i
                 indices_group.append(indices_list)
                 
-                if main_process():
-                    self.logger.info(f'"{dataset_i.data_name}", {self.phase} set in group {gi}: ' + 
-                                     f'expand size {len(sample_list_i)} --->>>---, {expand_size_i}')
+                # if main_process():
+                #     self.logger.info(f'"{dataset_i.data_name}", {self.phase} set in group {gi}: ' + 
+                #                      f'expand size {len(sample_list_i)} --->>>---, {expand_size_i}')
 
             concat_group = np.concatenate(indices_expand_group)
             # shuffle the grouped datasets samples, e.g. each group data is [a1, a2, a3, b1, b2, b3, b4, c1, c2], the shuffled one, maybe, is [a3, b1, b2, b3, b4, c1,...]
@@ -147,7 +147,7 @@ class CustomerMultiDataSampler(torch.utils.data.Sampler):
         if diff_size > 0:
             self.sample_indices_array = np.append(self.sample_indices_array, self.sample_indices_array[:diff_size])
         #if main_process():
-        self.logger.info(f'Expanded data size in merged dataset: {self.total_sample_size}, adjusted data size for distributed running: {self.total_dist_size}')
+        # self.logger.info(f'Expanded data size in merged dataset: {self.total_sample_size}, adjusted data size for distributed running: {self.total_dist_size}')
         self.random_seed += 413
         self.random_seed_cp += 377
 

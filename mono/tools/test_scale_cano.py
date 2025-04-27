@@ -30,6 +30,7 @@ from mono.utils.custom_data import load_from_annos, load_data
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a segmentor')
     parser.add_argument('--config', help='train config file path')
+    parser.add_argument('--db-root', help='the parent dir for file in test data annotations')
     parser.add_argument('--show-dir', help='the dir to save logs and visualization results')
     parser.add_argument('--load-from', help='the checkpoint file to load weights from')
     parser.add_argument('--node_rank', type=int, default=0)
@@ -42,8 +43,12 @@ def parse_args():
     metric3d_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     args.config = f'{metric3d_dir}/mono/configs/HourglassDecoder/vit.raft5.large.py'
     args.load_from = f'{metric3d_dir}/weights/metric_depth_vit_large_800k.pth'
-    args.test_data_path = f'{metric3d_dir}/data/kitti_demo/test_annotations.json'
     args.launcher = 'None'
+    # args.db_root = f'{metric3d_dir}'
+    # args.test_data_path = f'{metric3d_dir}/data/kitti_demo/test_annotations.json'
+
+    args.db_root = '/media/levin/DATA/nerf/new_es8/stereo_20250331/20250331/jiuting_campus/annotation'
+    args.test_data_path = f'{args.db_root}/zed_annotation.json'
     return args
 
 def main(args):
@@ -101,7 +106,7 @@ def main(args):
         test_data_path = osp.join(CODE_SPACE, test_data_path)
 
     if 'json' in test_data_path:
-        test_data = load_from_annos(test_data_path)
+        test_data = load_from_annos(test_data_path, args.db_root)
     else:
         test_data = load_data(args.test_data_path)
     
