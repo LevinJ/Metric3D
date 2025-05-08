@@ -43,10 +43,15 @@ def parse_args():
     metric3d_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     args.config = f'{metric3d_dir}/mono/configs/HourglassDecoder/vit.raft5.large.py'
     args.load_from = f'{metric3d_dir}/weights/metric_depth_vit_large_800k.pth'
+    # args.load_from = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250424_150135/ckpt/step00012000.pth'
+    # args.load_from = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250506_162348/ckpt/step00008000.pth'
+    
     args.launcher = 'None'
     # args.db_root = f'{metric3d_dir}'
     # args.test_data_path = f'{metric3d_dir}/data/kitti_demo/test_annotations.json'
 
+    # args.load_from = '/home/levin/.cache/torch/hub/checkpoints/step00006000.pth'
+    args.load_from = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250507_163216/ckpt/step00020010.pth'
     args.db_root = '/media/levin/DATA/nerf/new_es8/stereo_20250331/20250331/jiuting_campus/annotation'
     args.test_data_path = f'{args.db_root}/zed_annotation.json'
     return args

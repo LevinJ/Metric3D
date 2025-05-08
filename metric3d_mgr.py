@@ -26,6 +26,30 @@ class Metric3dMgr(object):
         self.model = None
         self.use_onnx = False
         return
+    def load_metric3d_model(self):
+        try:
+            from mmcv.utils import Config, DictAction
+        except:
+            from mmengine import Config, DictAction
+
+        from mono.model.monodepth_model import get_configured_monodepth_model
+
+        cfg_file =  '/home/levin/workspace/nerf/tools/Metric3D/mono/configs/HourglassDecoder/vit.raft5.large.py'
+
+
+        # ckpt_file = '/home/levin/.cache/torch/hub/checkpoints/metric_depth_vit_large_800k.pth'
+        ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250507_163216/ckpt/step00020010.pth'
+
+        cfg = Config.fromfile(cfg_file)
+        model = get_configured_monodepth_model(cfg)
+
+        state_dict = torch.load(ckpt_file, map_location=None, weights_only=False)['model_state_dict']
+        model.load_state_dict(state_dict, 
+            strict=False,
+        )
+        model.cuda().eval()
+        self.model = model
+        return
     def init_model(self, model_name='metric3d_vit_giant2'):
         if self.model is not None:
             return
@@ -45,11 +69,11 @@ class Metric3dMgr(object):
             self.model = ort.InferenceSession(onnx_model, providers=providers)
             return
         # Use torch.hub.load to load the model from a local directory
-        local_repo = str(Path(__file__).parent)  # Get the current file's directory
-        model = torch.hub.load(local_repo, model_name, source='local', pretrain=True)
-        model.cuda().eval()
-        self.model = model
-        return
+        # local_repo = str(Path(__file__).parent)  # Get the current file's directory
+        # model = torch.hub.load(local_repo, model_name, source='local', pretrain=True)
+        # model.cuda().eval()
+        # self.model = model
+        return self.load_metric3d_model()
     # def infer(self,rgb_image, intr):
     #     depth = self.metric(rgb_image=rgb_image, intrinsic=intr, d_max=self.d_max)
     #     return depth

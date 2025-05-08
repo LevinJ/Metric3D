@@ -81,8 +81,10 @@ def parse_args():
 
     args.config =  '/home/levin/workspace/nerf/tools/Metric3D/training/mono/configs/RAFTDecoder/vit.raft5.large.kitti.py'
     args.load_from = f'{metric3d_dir}/weights/metric_depth_vit_large_800k.pth'
+    # args.resume_from = f'/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250424_150135/ckpt/step00012000.pth'
+    args.resume_from = f'/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250507_083349/ckpt/step00008000.pth'
     args.use_tensorboard = True
-    args.resume_from = None
+    # args.resume_from = None
     args.launcher = 'None'
     args.experiment_name = 'set1'
     return args
