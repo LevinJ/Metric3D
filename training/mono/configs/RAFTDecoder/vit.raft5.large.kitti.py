@@ -57,18 +57,18 @@ data_basic=dict(
 
 # interval = 4000
 interval = 200
-log_interval = 10
+log_interval = 100
 evaluation = dict(
     online_eval=True, 
-    interval=interval, 
+    interval=1000, 
     metrics=['abs_rel', 'delta1', 'rmse', 'normal_mean', 'normal_rmse', 'normal_a1'], 
     multi_dataset_eval=False,
     exclude=['DIML_indoor', 'GL3D', 'Tourism', 'MegaDepth'],
 )
 
 # save checkpoint during training, with '*_AMP' is employing the automatic mix precision training
-checkpoint_config = dict(by_epoch=False, interval=interval * 10)
-runner = dict(type='IterBasedRunner_AMP', max_iters=20010)
+checkpoint_config = dict(by_epoch=False, interval=4000)
+runner = dict(type='IterBasedRunner_AMP', max_iters=20010 * 5)
 
 # optimizer
 optimizer = dict(

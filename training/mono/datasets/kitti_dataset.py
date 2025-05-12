@@ -173,7 +173,8 @@ class KITTIDataset(BaseDataset):
     
     def process_depth(self, depth, rgb):
         if hasattr(self.cfg, 'zed_camera') and self.cfg.zed_camera:
-            return super().process_depth(depth, rgb)  # Call the parent class's method
+            new_depth = super().process_depth(depth, rgb)/self.metric_scale  # Call the parent class's method
+            return new_depth
         # crop the depth map
         new_depth = np.zeros_like(depth)
         H, W = depth.shape

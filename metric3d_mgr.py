@@ -39,7 +39,7 @@ class Metric3dMgr(object):
 
         # ckpt_file = '/home/levin/.cache/torch/hub/checkpoints/metric_depth_vit_large_800k.pth'
         ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250507_163216/ckpt/step00020010.pth'
-
+        # ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250509_155840/ckpt/step00100050.pth'
         cfg = Config.fromfile(cfg_file)
         model = get_configured_monodepth_model(cfg)
 
