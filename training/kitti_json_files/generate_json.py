@@ -5,6 +5,8 @@ common_root = '/media/levin/DATA/nerf/public_depth/kitti'
 depth_root = 'data_depth_annotated'
 raw_root = 'raw_data'
 
+split = 'test'
+
 #print(os.listdir(os.path.join(common_root, raw_root)))
 
 mid = 'proj_depth/groundtruth'
@@ -15,7 +17,7 @@ test_file_list = []
 train_file_dict = {}
 
 
-with open('/home/levin/workspace/nerf/tools/Metric3D/training/kitti_json_files/eigen_train.txt') as f:
+with open(f'/home/levin/workspace/nerf/tools/Metric3D/training/kitti_json_files/eigen_{split}.txt') as f:
     lines_train = f.readlines()
 
 cnt = 0
@@ -72,7 +74,7 @@ if True:
             invalid_cnt += 1
             continue
 
-        curr_file = [{'rgb':rgb.replace("\\", '/'), 'depth':depth_rel.replace("\\", '/'), 'cam_in':cam_in}]
+        curr_file = [{'rgb':rgb.replace("\\", '/'), 'depth':depth_rel.replace("\\", '/'), 'cam_in':cam_in, 'depth_scale':256.0}]
         test_file_list = test_file_list + curr_file
 
         if ((cnt + invalid_cnt) % 1000 == 0):
@@ -81,5 +83,5 @@ if True:
 print(cnt, invalid_cnt)
 
 train_file_dict['files'] = test_file_list
-with open('eigen_train.json', 'w') as fj:
+with open(f'eigen_{split}.json', 'w') as fj:
     json.dump(train_file_dict, fj)

@@ -36,10 +36,14 @@ class Metric3dMgr(object):
 
         cfg_file =  '/home/levin/workspace/nerf/tools/Metric3D/mono/configs/HourglassDecoder/vit.raft5.large.py'
 
-
+        # ckpt_file = '/media/levin/DATA/checkpoints/droid_metric/metric_depth_vit_large_800k.pth'
         # ckpt_file = '/home/levin/.cache/torch/hub/checkpoints/metric_depth_vit_large_800k.pth'
-        ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250507_163216/ckpt/step00020010.pth'
+        # ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250507_163216/ckpt/step00020010.pth'
         # ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250509_155840/ckpt/step00100050.pth'
+        # ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250512_143541/ckpt/step00036000.pth'
+        # ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250512_143541/ckpt/step00036000.pth'
+        # ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250611_142418/ckpt/step00052000.pth'
+        ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250612_163052/ckpt/step00100050.pth'
         cfg = Config.fromfile(cfg_file)
         model = get_configured_monodepth_model(cfg)
 
@@ -163,28 +167,27 @@ class Metric3dMgr(object):
         # intrinsic = [1081.695079, 1081.019193, 950.014133, 557.173103]
 
         #front wide camera
-        # rgb_file = "/media/levin/DATA/nerf/new_es8/20250311/levin/03_11-15/rgb/front_wide/rgb_00772_front_wide.jpg"
-        # depth_file = None
-        # intrinsic = np.loadtxt("/media/levin/DATA/nerf/cameras/cam_front_wide_intrinsics.txt").reshape(3, 3)
-        # fx, fy = intrinsic[0, 0], intrinsic[1, 1]
-        # cx, cy = intrinsic[0, 2], intrinsic[1, 2]
-        # intrinsic = [fx, fy, cx, cy]
+        rgb_file = "/media/levin/DATA/nerf/new_es8/20250311/levin/03_11-15/rgb/front_wide/rgb_00772_front_wide.jpg"
+        depth_file = None
+        intrinsic = np.loadtxt("/media/levin/DATA/nerf/cameras/cam_front_wide_intrinsics.txt").reshape(3, 3)
+        fx, fy = intrinsic[0, 0], intrinsic[1, 1]
+        cx, cy = intrinsic[0, 2], intrinsic[1, 2]
+        intrinsic = [fx, fy, cx, cy]
 
 
 
         #left stereo
-        folder ='/media/levin/DATA/nerf/new_es8/stereo_20250331/20250331/jiuting_campus/annotation/'
-        file_name = '20250331_111636.639_10'
-        rgb_file = f'{folder}/rgb/{file_name}.png'
-        depth_file = f'{folder}/depth/{file_name}.npy'
-        intrinsic =  [1049.68408203125, 1049.68408203125, 998.2841796875, 589.4127197265625]
+        # folder ='/media/levin/DATA/nerf/new_es8/stereo_20250331/20250331/jiuting_campus/annotation/'
+        # file_name = '20250331_111636.639_10'
+        # rgb_file = f'{folder}/rgb/{file_name}.png'
+        # depth_file = f'{folder}/depth/{file_name}.npy'
+        # intrinsic =  [1049.68408203125, 1049.68408203125, 998.2841796875, 589.4127197265625]
 
 
         gt_depth_scale = 256.0
         rgb_origin = cv2.imread(rgb_file)[:, :, ::-1]
-
-       
         pred_depth = self.infer_depth(rgb_origin, intrinsic)
+
         # save predicted depth
         # np.save('small_torch.npy', pred_depth.cpu().numpy())
 
