@@ -83,7 +83,7 @@ class CustomerMultiDataSampler(torch.utils.data.Sampler):
             
             # adjust each group to ensure they have the same data size
             group_cumulative_sizes = [0] + dataset_group.cumulative_sizes
-            expand_indices_sizes = (np.array(group_cumulative_sizes) * cp_times).astype(np.int)
+            expand_indices_sizes = (np.array(group_cumulative_sizes) * cp_times).astype(int)
             expand_indices_sizes[-1] = max_group_size
             # datasets in the same group have to expand its sample list
             expand_indices_sizes = expand_indices_sizes[1:] - expand_indices_sizes[:-1]

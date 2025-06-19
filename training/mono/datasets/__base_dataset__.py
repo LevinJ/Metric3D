@@ -14,6 +14,7 @@ import pickle
 import logging
 import multiprocessing as mp
 import ctypes
+from pathlib import Path
 """
 Dataset annotations are saved in a Json file. All data, including rgb, depth, pose, and so on, captured within the same frame are saved in the same dict.
 All frames are organized in a list. In each frame, it may contains the some or all of following data format. 
@@ -309,7 +310,7 @@ class BaseDataset(Dataset):
                                                                    transform_paras=transform_paras)
         # depth in original size and orignial metric***
         depth_out = self.clip_depth(curr_depth) * self.depth_range[1] # self.clip_depth(depths[0]) #
-        inv_depth = self.depth2invdepth(depth_out, np.zeros_like(depth_out, dtype=np.bool))
+        inv_depth = self.depth2invdepth(depth_out, np.zeros_like(depth_out, dtype=bool))
         filename = os.path.basename(meta_data['rgb'])[:-4] + '.jpg'
         curr_intrinsic_mat = self.intrinsics_list2mat(intrinsics[0])
         ori_curr_intrinsic_mat = self.intrinsics_list2mat(ori_curr_intrinsic)
@@ -341,8 +342,14 @@ class BaseDataset(Dataset):
         return data
     
     def load_data_path(self, meta_data):
-        curr_rgb_path = os.path.join(self.data_root, meta_data['rgb'])
-        curr_depth_path = os.path.join(self.depth_root, meta_data['depth'])
+        if Path(meta_data['rgb']).is_absolute():
+            # if the path is absolute, then use it directly
+            curr_rgb_path = meta_data['rgb']
+            curr_depth_path = meta_data['depth']
+        else:
+            # if the path is relative, then join with the data root
+            curr_rgb_path = os.path.join(self.data_root, meta_data['rgb'])
+            curr_depth_path = os.path.join(self.depth_root, meta_data['depth'])
         curr_sem_path = os.path.join(self.sem_root, meta_data['sem']) \
             if self.sem_root is not None and ('sem' in meta_data) and (meta_data['sem'] is not None)  \
             else None
@@ -370,6 +377,8 @@ class BaseDataset(Dataset):
         else:
             curr_disp_path = None
 
+        
+               
         data_path=dict(
             rgb_path=curr_rgb_path,
             depth_path=curr_depth_path,
@@ -525,7 +534,7 @@ class BaseDataset(Dataset):
         #     rgb_path=rgb,
         #     depth_path=depth,
         # ))
-        depth = depth.astype(np.float)
+        depth = depth.astype(float)
         # if depth.shape != rgb.shape[:2]:
         #     print(f'no-equal in {self.data_name}')
         #     depth = cv2.resize(depth, rgb.shape[::-1][1:])
@@ -538,11 +547,11 @@ class BaseDataset(Dataset):
         # if sem_path is not None:
         #     print(self.data_name)
         sem_label = cv2.imread(sem_path, 0) if sem_path is not None \
-            else np.ones((H, W), dtype=np.int) * -1
+            else np.ones((H, W), dtype=int) * -1
         if sem_label is None:
-            sem_label = np.ones((H, W), dtype=np.int) * -1
+            sem_label = np.ones((H, W), dtype=int) * -1
         # set dtype to int before 
-        sem_label = sem_label.astype(np.int) 
+        sem_label = sem_label.astype(int) 
         sem_label[sem_label==255] = -1
         
         # mask invalid sky region
@@ -554,7 +563,7 @@ class BaseDataset(Dataset):
     
     def load_depth_valid_mask(self, depth_mask_path, depth=None) -> np.array:
         if depth_mask_path is None:
-            return np.ones_like(depth, dtype=np.bool)
+            return np.ones_like(depth, dtype=bool)
         data_type = os.path.splitext(depth_mask_path)[-1]
         if data_type in self.img_file_type:
             data = cv2.imread(depth_mask_path, -1)
@@ -562,7 +571,7 @@ class BaseDataset(Dataset):
             data = np.load(depth_mask_path)
         else:
             raise RuntimeError(f'{data_type} is not supported in current version.')
-        data = data.astype(np.bool)
+        data = data.astype(bool)
         return data
         
     def load_norm_label(self, norm_path, H, W):

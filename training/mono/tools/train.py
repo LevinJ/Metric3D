@@ -83,6 +83,7 @@ def parse_args():
     args.load_from = f'{metric3d_dir}/weights/metric_depth_vit_large_800k.pth'
     # args.resume_from = f'/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250424_150135/ckpt/step00012000.pth'
     # args.resume_from = f'/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250507_163216/ckpt/step00020010.pth'
+    # args.resume_from = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250513_131103/ckpt/step00096000.pth'
     args.use_tensorboard = True
     # args.resume_from = None
     args.launcher = 'None'
@@ -188,27 +189,27 @@ def main(args):
     cfg.db_info = data_info
 
     # #for ZED stereo camera
-    # cfg['KITTI_dataset'].metric_scale = 1.0
-    # cfg['KITTI_dataset'].zed_camera = True
-    # cfg.db_info['KITTI'] = {
-    #                     'db_root': '/media/levin/DATA/nerf/new_es8/stereo_20250331/20250331/jiuting_campus/annotation',
-    #                     'data_root': '',
-    #                     'train_annotations_path': 'zed_annotation.json',
-    #                     'test_annotations_path': 'zed_annotation.json',
-    #                     'val_annotations_path': 'zed_annotation.json',
-    #                 }
-    
-    #for ZED stereo camera, lidar ground truth
-    # cfg['KITTI_dataset'].metric_scale = 1.0
+    cfg['KITTI_dataset'].metric_scale = 1.0
     cfg['KITTI_dataset'].zed_camera = True
-    cfg['KITTI_dataset'].metric_scale = 256.0
     cfg.db_info['KITTI'] = {
-                        'db_root': '/media/levin/DATA/nerf/new_es8/stereo/zed_lidar1/depth',
+                        'db_root': '/media/levin/DATA/nerf/new_es8/stereo_20250331/20250331/jiuting_campus/annotation',
                         'data_root': '',
                         'train_annotations_path': 'zed_annotation.json',
                         'test_annotations_path': 'zed_annotation.json',
                         'val_annotations_path': 'zed_annotation.json',
                     }
+    
+    #for ZED stereo camera, lidar ground truth
+    # cfg['KITTI_dataset'].metric_scale = 1.0
+    # cfg['KITTI_dataset'].zed_camera = True
+    # cfg['KITTI_dataset'].metric_scale = 256.0
+    # cfg.db_info['KITTI'] = {
+    #                     'db_root': '/media/levin/DATA/nerf/new_es8/stereo/zed_lidar1/depth',
+    #                     'data_root': '',
+    #                     'train_annotations_path': 'zed_annotation.json',
+    #                     'test_annotations_path': 'zed_annotation.json',
+    #                     'val_annotations_path': 'zed_annotation.json',
+    #                 }
 
     # update check point info
     reset_ckpt_path(cfg.model, data_info)
