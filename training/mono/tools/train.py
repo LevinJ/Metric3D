@@ -84,10 +84,9 @@ def parse_args():
     # args.resume_from = f'/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250424_150135/ckpt/step00012000.pth'
     # args.resume_from = f'/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250507_163216/ckpt/step00020010.pth'
     # args.resume_from = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250513_131103/ckpt/step00096000.pth'
-    args.resume_from = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250611_142418/ckpt/step00052000.pth'
     args.use_tensorboard = True
     # args.resume_from = None
-    args.launcher = 'None'
+    args.launcher = 'slurm'
     args.experiment_name = 'set1'
     return args
 
@@ -190,15 +189,15 @@ def main(args):
     cfg.db_info = data_info
 
     # #for ZED stereo camera
-    cfg['KITTI_dataset'].metric_scale = 1.0
-    cfg['KITTI_dataset'].zed_camera = True
-    cfg.db_info['KITTI'] = {
-                    'db_root': '/home/levin/workspace/nerf/tools/FoundationStereo/scripts/temp',
-                    'data_root': '',
-                    'train_annotations_path': 'merged_zed_annotation.json',
-                    'test_annotations_path': 'merged_zed_annotation.json',
-                    'val_annotations_path': 'merged_zed_annotation.json',
-                }
+    # cfg['KITTI_dataset'].metric_scale = 1.0
+    # cfg['KITTI_dataset'].zed_camera = True
+    # cfg.db_info['KITTI'] = {
+    #                     'db_root': '/media/levin/DATA/nerf/new_es8/stereo_20250331/20250331/jiuting_campus/annotation',
+    #                     'data_root': '',
+    #                     'train_annotations_path': 'zed_annotation.json',
+    #                     'test_annotations_path': 'zed_annotation.json',
+    #                     'val_annotations_path': 'zed_annotation.json',
+    #                 }
     
     #for ZED stereo camera, lidar ground truth
     # cfg['KITTI_dataset'].metric_scale = 1.0
@@ -241,7 +240,7 @@ def main(args):
             main_worker(args.local_rank, cfg, args.launcher)
 
 def main_worker(local_rank: int, cfg: dict, launcher: str='slurm'):
-    logger = logging.getLogger()
+    logger = setup_logger(cfg.log_file)
     if cfg.distributed:
         if launcher == 'slurm':
             torch.set_num_threads(8) # without it, the spawn method is much slower than the launch method 

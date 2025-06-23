@@ -284,11 +284,11 @@ db_info['ScanNet'] = {
 # }
 #for test kitti
 db_info['KITTI'] = {
-    'db_root': '/home/levin/workspace/nerf/tools/Metric3D',
+    'db_root': '/media/levin/DATA/nerf/public_depth/kitti',
     'data_root': '',
-    'train_annotations_path': 'data/kitti_demo/test_annotations.json',
-    'test_annotations_path': 'data/kitti_demo/test_annotations.json',
-    'val_annotations_path': 'data/kitti_demo/test_annotations.json',
+    'train_annotations_path': 'eigen_train.json',
+    'test_annotations_path': 'eigen_val.json',
+    'val_annotations_path': 'eigen_test.json',
 }
 
 

@@ -17,7 +17,8 @@ model=dict(
 
 dist_params=dict(
     nnodes=1,
-    node_rank=0)
+    node_rank=0,
+    backend='nccl')
 
 # loss method
 losses=dict(
@@ -57,18 +58,18 @@ data_basic=dict(
 
 # interval = 4000
 interval = 200
-log_interval = 100
+log_interval = 50
 evaluation = dict(
     online_eval=True, 
-    interval=500, 
+    interval=10 *1000, 
     metrics=['abs_rel', 'delta1', 'rmse', 'normal_mean', 'normal_rmse', 'normal_a1'], 
     multi_dataset_eval=False,
     exclude=['DIML_indoor', 'GL3D', 'Tourism', 'MegaDepth'],
 )
 
 # save checkpoint during training, with '*_AMP' is employing the automatic mix precision training
-checkpoint_config = dict(by_epoch=False, interval=4000)
-runner = dict(type='IterBasedRunner_AMP', max_iters=20010 * 5)
+checkpoint_config = dict(by_epoch=False, interval=10 *1000)
+runner = dict(type='IterBasedRunner_AMP', max_iters=20 * 1000 * 2)
 
 # optimizer
 optimizer = dict(
@@ -88,65 +89,35 @@ acc_batch = 1
 batchsize_per_gpu = 2
 thread_per_gpu = 2
 
-# KITTI_dataset=dict(
-#     data = dict(
-#     train=dict(
-#         pipeline=[dict(type='BGR2RGB'),
-#                   dict(type='LabelScaleCononical'),
-#                   dict(type='RandomResize',
-#                          prob=0.5,
-#                          ratio_range=(0.85, 1.15),
-#                          is_lidar=True),
-#                     dict(type='RandomCrop', 
-#                          crop_size=(0,0), # crop_size will be overwriteen by data_basic configs
-#                          crop_type='rand', 
-#                          ignore_label=-1, 
-#                          padding=[0, 0, 0]),
-#                     dict(type='RandomEdgeMask',
-#                          mask_maxsize=50, 
-#                          prob=0.2, 
-#                          rgb_invalid=[0,0,0], 
-#                          label_invalid=-1,),
-#                   dict(type='RandomHorizontalFlip', 
-#                        prob=0.4),
-#                   dict(type='PhotoMetricDistortion', 
-#                        to_gray_prob=0.1,
-#                        distortion_prob=0.1,),
-#                   dict(type='Weather',
-#                        prob=0.05),
-#                   dict(type='RandomBlur', 
-#                        prob=0.05),
-#                   dict(type='RGBCompresion', prob=0.1, compression=(0, 40)),
-#                   dict(type='ToTensor'),
-#                   dict(type='Normalize', mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375]),
-#                  ],
-#         #sample_size = 10,
-#     ),
-#     val=dict(
-#         pipeline=[dict(type='BGR2RGB'),
-#                   dict(type='LabelScaleCononical'),
-#                   dict(type='RandomCrop', 
-#                          crop_size=(0,0), # crop_size will be overwriteen by data_basic configs
-#                          crop_type='center', 
-#                          ignore_label=-1, 
-#                          padding=[0, 0, 0]),
-#                   dict(type='ToTensor'),
-#                   dict(type='Normalize', mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375]),
-#                  ],
-#         sample_size = 1200,
-#     ),
-#     ))
-
-
 KITTI_dataset=dict(
     data = dict(
     train=dict(
         pipeline=[dict(type='BGR2RGB'),
                   dict(type='LabelScaleCononical'),
-                  dict(type='ResizeKeepRatio', 
-                       resize_size=(616, 1064),
-                       ignore_label=-1, 
-                       padding=[123.675, 116.28, 103.53]),
+                  dict(type='RandomResize',
+                         prob=0.5,
+                         ratio_range=(0.85, 1.15),
+                         is_lidar=True),
+                    dict(type='RandomCrop', 
+                         crop_size=(0,0), # crop_size will be overwriteen by data_basic configs
+                         crop_type='rand', 
+                         ignore_label=-1, 
+                         padding=[0, 0, 0]),
+                    dict(type='RandomEdgeMask',
+                         mask_maxsize=50, 
+                         prob=0.2, 
+                         rgb_invalid=[0,0,0], 
+                         label_invalid=-1,),
+                  dict(type='RandomHorizontalFlip', 
+                       prob=0.4),
+                  dict(type='PhotoMetricDistortion', 
+                       to_gray_prob=0.1,
+                       distortion_prob=0.1,),
+                  dict(type='Weather',
+                       prob=0.05),
+                  dict(type='RandomBlur', 
+                       prob=0.05),
+                  dict(type='RGBCompresion', prob=0.1, compression=(0, 40)),
                   dict(type='ToTensor'),
                   dict(type='Normalize', mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375]),
                  ],
@@ -155,13 +126,43 @@ KITTI_dataset=dict(
     val=dict(
         pipeline=[dict(type='BGR2RGB'),
                   dict(type='LabelScaleCononical'),
-                  dict(type='ResizeKeepRatio', 
-                       resize_size=(616, 1064),
-                       ignore_label=-1, 
-                       padding=[123.675, 116.28, 103.53]),
+                  dict(type='RandomCrop', 
+                         crop_size=(0,0), # crop_size will be overwriteen by data_basic configs
+                         crop_type='center', 
+                         ignore_label=-1, 
+                         padding=[0, 0, 0]),
                   dict(type='ToTensor'),
                   dict(type='Normalize', mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375]),
                  ],
         sample_size = 1200,
     ),
     ))
+
+
+# KITTI_dataset=dict(
+#     data = dict(
+#     train=dict(
+#         pipeline=[dict(type='BGR2RGB'),
+#                   dict(type='LabelScaleCononical'),
+#                   dict(type='ResizeKeepRatio', 
+#                        resize_size=(616, 1064),
+#                        ignore_label=-1, 
+#                        padding=[123.675, 116.28, 103.53]),
+#                   dict(type='ToTensor'),
+#                   dict(type='Normalize', mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375]),
+#                  ],
+#         #sample_size = 10,
+#     ),
+#     val=dict(
+#         pipeline=[dict(type='BGR2RGB'),
+#                   dict(type='LabelScaleCononical'),
+#                   dict(type='ResizeKeepRatio', 
+#                        resize_size=(616, 1064),
+#                        ignore_label=-1, 
+#                        padding=[123.675, 116.28, 103.53]),
+#                   dict(type='ToTensor'),
+#                   dict(type='Normalize', mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375]),
+#                  ],
+#         sample_size = 1200,
+#     ),
+#     ))
