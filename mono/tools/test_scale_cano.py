@@ -45,17 +45,17 @@ def parse_args():
     args.load_from = f'{metric3d_dir}/weights/metric_depth_vit_large_800k.pth'
     # args.load_from = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250424_150135/ckpt/step00012000.pth'
     # args.load_from = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250506_162348/ckpt/step00008000.pth'
-    
+    args.load_from = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250620_141101/ckpt/step00040000.pth'
     #for kitti sampling test data
     # args.launcher = 'None'
     # args.db_root = f'{metric3d_dir}'
     # args.test_data_path = f'{metric3d_dir}/data/kitti_demo/test_annotations.json'
 
     #for kitti dept dataset testing
-    args.launcher = 'slurm'
+    args.launcher = 'None'
     args.db_root = '/media/levin/DATA/nerf/public_depth/kitti'
-    args.test_data_path = f'{args.db_root}/eigen_test.json'
-    args.batch_size = 8
+    args.test_data_path = f'{args.db_root}/eigen_val.json'
+    args.batch_size =8
 
 
     # args.load_from = '/home/levin/.cache/torch/hub/checkpoints/step00006000.pth'
