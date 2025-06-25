@@ -66,6 +66,7 @@ def main(args):
     cfg.dist_params.nnodes = args.nnodes
     cfg.dist_params.node_rank = args.node_rank
     cfg.batchsize_per_gpu = args.batchsize_per_gpu
+    cfg.load_from = args.load_from
     if args.options is not None:
         cfg.merge_from_dict(args.options)
 
@@ -131,6 +132,8 @@ def main_worker(local_rank, cfg, launcher):
         model = torch.nn.parallel.DistributedDataParallel(model.cuda(), device_ids=[local_rank], output_device=local_rank, find_unused_parameters=True)
     else:
         model = torch.nn.DataParallel(model).cuda()
+
+    model, _, _, _ = load_ckpt(cfg.load_from, model, optimizer=None, scheduler=None, strict_match=False, loss_scaler=None)
     model.eval()
     # Metric
     dam = MetricAverageMeter(['abs_rel', 'rmse', 'silog', 'delta1', 'delta2', 'delta3'])
@@ -152,7 +155,7 @@ def main_worker(local_rank, cfg, launcher):
             mask = gt_depth > 0
             dam.update_metrics_gpu(pred_depth, gt_depth, mask, cfg.distributed)
             # Print memory usage
-            print(f"Batch {i}: Allocated: {torch.cuda.memory_allocated() / 1024**2:.2f} MB, Cached: {torch.cuda.memory_reserved() / 1024**2:.2f} MB")
+            # print(f"Batch {i}: Allocated: {torch.cuda.memory_allocated() / 1024**2:.2f} MB, Cached: {torch.cuda.memory_reserved() / 1024**2:.2f} MB")
             # Free memory
             del output, pred_depth, gt_depth, mask, data, batch
             torch.cuda.empty_cache()
