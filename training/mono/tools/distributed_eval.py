@@ -42,7 +42,7 @@ def parse_args():
     from pathlib import Path
     metric3d_dir = Path(__file__).resolve().parents[3]
 
-    args.launcher = 'None'
+    args.launcher = 'slurm'
     args.config =  '/home/levin/workspace/nerf/tools/Metric3D/training/mono/configs/RAFTDecoder/vit.raft5.large.kitti.py'
     args.load_from = f'{metric3d_dir}/weights/metric_depth_vit_large_800k.pth'
    
@@ -52,14 +52,6 @@ def parse_args():
     args.timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
     args.batchsize_per_gpu = 8
     return args
-def to_cuda(data):
-    for k, v in data.items():
-        if isinstance(v, torch.Tensor):
-            data[k] = v.cuda(non_blocking=True)
-        if isinstance(v, list) and len(v)>1 and isinstance(v[0], torch.Tensor):
-            for i, l_i in enumerate(v):
-                data[k][i] = l_i.cuda(non_blocking=True)
-    return data
 def main(args):
     os.chdir(CODE_SPACE)
     cfg = Config.fromfile(args.config)
@@ -139,10 +131,12 @@ def main_worker(local_rank, cfg, launcher):
     dam = MetricAverageMeter(['abs_rel', 'rmse', 'silog', 'delta1', 'delta2', 'delta3'])
     with torch.no_grad():
         # Wrap val_loader with tqdm for progress bar
-        for i, batch in enumerate(tqdm(val_loader, desc="Validating", leave=True)):
+        for i, batch in enumerate(tqdm(val_loader, desc="Validating")):
+            if i == 2:
+                break
             # Move batch to GPU
             data = {k: v.cuda(local_rank, non_blocking=True) if torch.is_tensor(v) else v for k, v in batch.items()}
-            # data = to_cuda(data)
+            
             output = model.module.inference(data)
             pred_depth = output['prediction']
             gt_depth = data['target']
@@ -157,8 +151,8 @@ def main_worker(local_rank, cfg, launcher):
             # Print memory usage
             # print(f"Batch {i}: Allocated: {torch.cuda.memory_allocated() / 1024**2:.2f} MB, Cached: {torch.cuda.memory_reserved() / 1024**2:.2f} MB")
             # Free memory
-            del output, pred_depth, gt_depth, mask, data, batch
-            torch.cuda.empty_cache()
+            # del output, pred_depth, gt_depth, mask, data, batch
+            # torch.cuda.empty_cache()
     # Reduce metrics across all processes
     if local_rank == 0:
         eval_error = dam.get_metrics()
