@@ -22,7 +22,7 @@ from mono.utils.logger import setup_logger
 from mono.utils.comm import init_env
 from mono.model.monodepth_model import get_configured_monodepth_model
 from mono.utils.running import load_ckpt
-from mono.datasets.distributed_sampler import build_dataset_n_sampler_with_cfg
+from mono.datasets.distributed_sampler import build_dataset_n_sampler_with_cfg, build_data_array, concatenate_datasets
 from mono.utils.avg_meter import MetricAverageMeter
 from mono.utils.db import load_data_info
 from mono.model.criterion import build_criterions
@@ -79,6 +79,15 @@ def main(args):
     load_data_info('data_server_info', data_info=data_info)
     cfg.db_info = data_info
 
+    # eval_pipeline = [{'type': 'BGR2RGB'},
+    #                 {'type': 'LabelScaleCononical'},
+    #                 {'type': 'ResizeKeepRatio', 'resize_size': (616, 1064), 'ignore_label': -1, 'padding': [123.675, 116.28, 103.53]},
+    #                 {'type': 'ToTensor'},
+    #                 {'type': 'Normalize', 'mean': [123.675, 116.28, 103.53], 'std': [58.395, 57.12, 57.375]}]
+
+    # cfg['KITTI_dataset'].data['train']['pipeline'] = eval_pipeline
+    # cfg['KITTI_dataset'].data['val']['pipeline'] = eval_pipeline
+
     # distributed setup
     if args.launcher == 'None':
         cfg.distributed = False
@@ -104,11 +113,27 @@ def main_worker(local_rank, cfg, launcher):
             timeout=timedelta(minutes=30)
         )
     # Build dataset and sampler
-    val_dataset, val_sampler = build_dataset_n_sampler_with_cfg(cfg, 'val')
+    # val_dataset, val_sampler = build_dataset_n_sampler_with_cfg(cfg, 'val')
+    # val_loader = torch.utils.data.DataLoader(
+    #     val_dataset,
+    #     batch_size=cfg.batchsize_per_gpu,
+    #     sampler=val_sampler,
+    #     num_workers=cfg.get('thread_per_gpu', 4),
+    #     pin_memory=True,
+    #     drop_last=False
+    # )
+     
+     
+    # build data array, similar datasets are organized in the same group
+    phase = 'val'
+    datasets_array = build_data_array(cfg, phase)
+    # concatenate datasets with torch.utils.data.ConcatDataset methods
+    val_dataset = concatenate_datasets(datasets_array)
+
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
         batch_size=cfg.batchsize_per_gpu,
-        sampler=val_sampler,
+        sampler=torch.utils.data.distributed.DistributedSampler(val_dataset, shuffle=False),
         num_workers=cfg.get('thread_per_gpu', 4),
         pin_memory=True,
         drop_last=False
@@ -132,8 +157,9 @@ def main_worker(local_rank, cfg, launcher):
     with torch.no_grad():
         # Wrap val_loader with tqdm for progress bar
         for i, batch in enumerate(tqdm(val_loader, desc="Validating")):
-            if i == 2:
-                break
+            # print(f"Rank {local_rank}: {len(batch['input'])}")
+            # if i == 2:
+            #     break
             # Move batch to GPU
             data = {k: v.cuda(local_rank, non_blocking=True) if torch.is_tensor(v) else v for k, v in batch.items()}
             
@@ -148,11 +174,7 @@ def main_worker(local_rank, cfg, launcher):
             gt_depth = gt_depth[:, :, pad[0]:H-pad[1], pad[2]:W-pad[3]]
             mask = gt_depth > 0
             dam.update_metrics_gpu(pred_depth, gt_depth, mask, cfg.distributed)
-            # Print memory usage
-            # print(f"Batch {i}: Allocated: {torch.cuda.memory_allocated() / 1024**2:.2f} MB, Cached: {torch.cuda.memory_reserved() / 1024**2:.2f} MB")
-            # Free memory
-            # del output, pred_depth, gt_depth, mask, data, batch
-            # torch.cuda.empty_cache()
+           
     # Reduce metrics across all processes
     if local_rank == 0:
         eval_error = dam.get_metrics()
