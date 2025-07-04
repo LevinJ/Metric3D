@@ -12,3 +12,5 @@ small_torch.npy
 temp/
 test.py
 training/kitti_json_files/eigen_train.json_old
+data/cifar-10-batches-py/
+data/cifar-10-python.tar.gz
