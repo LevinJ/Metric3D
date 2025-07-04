@@ -36,14 +36,15 @@ class Metric3dMgr(object):
 
         cfg_file =  '/home/levin/workspace/nerf/tools/Metric3D/mono/configs/HourglassDecoder/vit.raft5.large.py'
 
-        # ckpt_file = '/media/levin/DATA/checkpoints/droid_metric/metric_depth_vit_large_800k.pth'
+        ckpt_file = '/media/levin/DATA/checkpoints/droid_metric/metric_depth_vit_large_800k.pth'
         # ckpt_file = '/home/levin/.cache/torch/hub/checkpoints/metric_depth_vit_large_800k.pth'
         # ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250507_163216/ckpt/step00020010.pth'
         # ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250509_155840/ckpt/step00100050.pth'
         # ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250512_143541/ckpt/step00036000.pth'
         # ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250512_143541/ckpt/step00036000.pth'
         # ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250611_142418/ckpt/step00052000.pth'
-        ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250612_163052/ckpt/step00100050.pth'
+        # ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250612_163052/ckpt/step00100050.pth'
+        # ckpt_file = '/home/levin/workspace/nerf/tools/Metric3D/training/work_dirs/vit.raft5.large.kitti/20250630_073818/ckpt/step00040000.pth'  
         cfg = Config.fromfile(cfg_file)
         model = get_configured_monodepth_model(cfg)
 

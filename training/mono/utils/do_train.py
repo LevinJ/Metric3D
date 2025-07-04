@@ -358,7 +358,7 @@ def train_by_iters_amp(cfg, model, optimizer, lr_scheduler, train_dataloader, va
 
             # validate the model
                 if cfg.evaluation.online_eval and \
-                    ((step+acc_batch)//acc_batch) % eval_interval == 0 and \
+                    ((((step+acc_batch)//acc_batch) % eval_interval == 0) or step == 0) and \
                     val_dataloader is not None:
                 # if True:
                     if isinstance(val_dataloader, list):
