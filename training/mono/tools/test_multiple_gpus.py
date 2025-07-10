@@ -65,7 +65,9 @@ def train(rank, world_size, num_epochs=10):
         train_sampler.set_epoch(epoch)
         epoch_start = time.time()
         
+        num = 0
         for inputs, labels in train_loader:
+            num += 1
             inputs, labels = inputs.to(rank), labels.to(rank)
             # Print batch size for the first batch of the first epoch
             if epoch == 0 and not hasattr(train_loader, 'printed_flag'):
@@ -77,6 +79,7 @@ def train(rank, world_size, num_epochs=10):
             loss.backward()
             optimizer.step()
         
+        print(f"Local rank: {rank}, Batch number: {num}")
         epoch_time = time.time() - epoch_start
         epoch_times.append(epoch_time)
         
@@ -105,7 +108,7 @@ def train(rank, world_size, num_epochs=10):
 
 if __name__ == "__main__":
     world_size = torch.cuda.device_count()
-    num_epochs = 10
+    num_epochs = 5
     
     print(f"Starting training with {world_size} GPUs...")
     mp.spawn(train, args=(world_size, num_epochs), nprocs=world_size, join=True)
