@@ -60,32 +60,118 @@ def train(rank, world_size, num_epochs=10):
     epoch_times = []
     start_time = time.time()
     
+    
+
     # Training loop
     for epoch in range(num_epochs):
-        train_sampler.set_epoch(epoch)
         epoch_start = time.time()
+        train_sampler.set_epoch(epoch)
         
-        num = 0
-        for inputs, labels in train_loader:
-            num += 1
+
+        batch_num = 0
+        # Initialize a dictionary to accumulate durations for different code sections
+        durations = {
+            'data_loading': 0,
+            'zero_grad': 0,
+            'ddp_model': 0,
+            'criterion': 0,
+            'backward': 0,
+            'optimizer': 0,
+            'iteration': 0,
+            'dataloader_iterator': 0,
+            'inputs_to_device': 0
+        }
+
+        # Start timing for dataloader_iterator = iter(train_loader)
+        dataloader_iterator_start_time = time.time()
+        dataloader_iterator = iter(train_loader)
+        dataloader_iterator_end_time = time.time()
+
+        # Accumulate the duration for dataloader_iterator
+        durations['dataloader_iterator'] = durations.get('dataloader_iterator', 0) + (dataloader_iterator_end_time - dataloader_iterator_start_time)
+        
+        while True:
+            # Start timing the entire iteration
+            iteration_start_time = time.time()
+            # Start timing the selected code
+            code_start_time = time.time()
+            try:
+                inputs, labels = next(dataloader_iterator)     
+            except StopIteration:
+                break
+            batch_num += 1
+            # End timing the selected code
+            code_end_time = time.time()
+            # Accumulate the duration for the data loading code
+            durations['data_loading'] += (code_end_time - code_start_time)
+            
+            # Start timing for inputs, labels = inputs.to(rank), labels.to(rank)
+            inputs_to_device_start_time = time.time()
             inputs, labels = inputs.to(rank), labels.to(rank)
+            inputs_to_device_end_time = time.time()
+
+            # Accumulate the duration for inputs to device
+            durations['inputs_to_device'] += (inputs_to_device_end_time - inputs_to_device_start_time)
+           
+
+            
+
             # Print batch size for the first batch of the first epoch
             if epoch == 0 and not hasattr(train_loader, 'printed_flag'):
                 print(f"Local rank: {rank}, Batch size: {inputs.size(0)}")
                 train_loader.printed_flag = True
+
+            # Start timing optimizer.zero_grad()
+            zero_grad_start_time = time.time()
             optimizer.zero_grad()
+            # End timing optimizer.zero_grad()
+            zero_grad_end_time = time.time()
+
+            # Accumulate the duration for optimizer.zero_grad()
+            durations['zero_grad'] += (zero_grad_end_time - zero_grad_start_time)
+
+
+            # Start timing for outputs = ddp_model(inputs)
+            ddp_model_start_time = time.time()
             outputs = ddp_model(inputs)
+            ddp_model_end_time = time.time()
+            # Accumulate the duration for ddp_model
+            durations['ddp_model'] += (ddp_model_end_time - ddp_model_start_time)
+
+            # Start timing for loss = criterion(outputs, labels)
+            criterion_start_time = time.time()
             loss = criterion(outputs, labels)
+            criterion_end_time = time.time()
+            # Accumulate the duration for criterion
+            durations['criterion'] += (criterion_end_time - criterion_start_time)
+
+            # Start timing for loss.backward()
+            backward_start_time = time.time()
             loss.backward()
+            backward_end_time = time.time()
+            # Accumulate the duration for backward
+            durations['backward'] += (backward_end_time - backward_start_time)
+
+            # Start timing for optimizer.step()
+            optimizer_start_time = time.time()
             optimizer.step()
-        
-        print(f"Local rank: {rank}, Batch number: {num}")
+            optimizer_end_time = time.time()
+            # Accumulate the duration for optimizer
+            durations['optimizer'] += (optimizer_end_time - optimizer_start_time)
+
+            # End timing the entire iteration
+            iteration_end_time = time.time()
+            # Accumulate the duration for the entire iteration
+            durations['iteration'] += (iteration_end_time - iteration_start_time)
+
         epoch_time = time.time() - epoch_start
-        epoch_times.append(epoch_time)
-        
+
+        # Print the accumulated durations at the end of the epoch
         if rank == 0:
-            print(f'Epoch {epoch+1}/{num_epochs} | Time: {epoch_time:.2f}s')
-    
+            print(f"Epoch {epoch+1}/{num_epochs} | Time: {epoch_time:.2f}s | Data loading duration: {durations['data_loading']:.2f}s | Zero grad duration: {durations['zero_grad']:.2f}s | DDP model duration: {durations['ddp_model']:.2f}s | Criterion duration: {durations['criterion']:.2f}s | Backward duration: {durations['backward']:.2f}s | Optimizer duration: {durations['optimizer']:.2f}s | Iteration duration: {durations['iteration']:.2f}s | Dataloader iterator duration: {durations['dataloader_iterator']:.2f}s | Inputs to device duration: {durations['inputs_to_device']:.2f}s")
+        print(f"Rank {rank}: Epoch {epoch+1} finished with {batch_num} batches.")
+        epoch_times.append(epoch_time)
+
     total_time = time.time() - start_time
     
     # Collect metrics on rank 0
@@ -108,7 +194,9 @@ def train(rank, world_size, num_epochs=10):
 
 if __name__ == "__main__":
     world_size = torch.cuda.device_count()
-    num_epochs = 5
+    if world_size > 1:
+        world_size = 2  # For testing purposes, limit to 2 GPUs
+    num_epochs = 2
     
     print(f"Starting training with {world_size} GPUs...")
     mp.spawn(train, args=(world_size, num_epochs), nprocs=world_size, join=True)
