@@ -58,18 +58,18 @@ data_basic=dict(
 
 # interval = 4000
 interval = 200
-log_interval = 50
+log_interval = 100
 evaluation = dict(
     online_eval=True, 
-    interval=10 *1000, 
+    interval=10 *1000 * 2, 
     metrics=['abs_rel', 'delta1', 'rmse', 'normal_mean', 'normal_rmse', 'normal_a1'], 
     multi_dataset_eval=False,
     exclude=['DIML_indoor', 'GL3D', 'Tourism', 'MegaDepth'],
 )
 
 # save checkpoint during training, with '*_AMP' is employing the automatic mix precision training
-checkpoint_config = dict(by_epoch=False, interval=10 *1000)
-runner = dict(type='IterBasedRunner_AMP', max_iters=20 * 1000 * 2)
+checkpoint_config = dict(by_epoch=False, interval=10 *1000 * 2)
+runner = dict(type='IterBasedRunner_AMP', max_iters=10 * 1000 * 80)
 
 # optimizer
 optimizer = dict(
@@ -86,7 +86,7 @@ lr_config = dict(policy='poly',
                  power=0.9, min_lr=1e-8, by_epoch=False)
 
 acc_batch = 1
-batchsize_per_gpu = 2
+batchsize_per_gpu = 4
 thread_per_gpu = 2
 
 KITTI_dataset=dict(
