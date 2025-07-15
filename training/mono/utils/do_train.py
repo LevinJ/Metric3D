@@ -304,11 +304,14 @@ def train_by_iters_amp(cfg, model, optimizer, lr_scheduler, train_dataloader, va
         step = start_iter *  acc_batch
         while step < max_iters:
         # while True:
-            
+            durations = {}
+            import time
             if main_process():
                 training_stats.IterTic()
 
             # get the data batch
+            iteration_start_time = time.time()
+            code_start_time = time.time()
             try:
                 data = next(dataloader_iterator)
             except StopIteration:
@@ -320,27 +323,40 @@ def train_by_iters_amp(cfg, model, optimizer, lr_scheduler, train_dataloader, va
             except:
                 logger.info('Some training data errors exist in the current iter!')
                 continue
+            durations['data_loading'] = (time.time() - code_start_time)
 
+            code_start_time = time.time()
             data = to_cuda(data)
+            durations['to_cuda'] = (time.time() - code_start_time)
 
+            code_start_time = time.time()
             with torch.cuda.amp.autocast(dtype=torch.bfloat16):
                 pred_depth, losses_dict, conf = model(data)
-
+            
             total_loss = losses_dict['total_loss'] / acc_batch
 
             if not math.isfinite(total_loss):
                 logger.info("Loss is {}, skiping this batch training".format(total_loss))
                 continue
-            
+            durations['forward'] = (time.time() - code_start_time)
             # optimize, backward
+            code_start_time = time.time()
             if (step+1-start_iter) % acc_batch == 0:
                 optimizer.zero_grad()
+                durations['zero_grad'] = (time.time() - code_start_time)
             if loss_scaler == None:
+                code_start_time = time.time()
                 total_loss.backward()
+                durations['backward'] = (time.time() - code_start_time)
+                code_start_time = time.time()
                 try:
                     if (step+1-start_iter) % acc_batch == 0:
-                        torch.nn.utils.clip_grad_norm_(model.parameters(), 2.5, error_if_nonfinite=True)
+                        # torch.nn.utils.clip_grad_norm_(model.parameters(), 2.5, error_if_nonfinite=True)
+                        durations['clip_grad'] = (time.time() - code_start_time)
+
+                        code_start_time = time.time()
                         optimizer.step()
+                        durations['optimizer'] = (time.time() - code_start_time)
                 except:
                     print('NAN gradient, skipping optimizer.step() for this round...')
             else:
@@ -348,13 +364,28 @@ def train_by_iters_amp(cfg, model, optimizer, lr_scheduler, train_dataloader, va
 
             # reduce losses over all GPUs for logging purposes
             if (step+1-start_iter) % acc_batch == 0:
+                code_start_time = time.time()
                 loss_dict_reduced = reduce_dict(losses_dict)
                 lr_scheduler.after_train_iter(optimizer)
-
+                durations['lr_schedule'] = (time.time() - code_start_time)
                 if main_process():
+                    durations['iteration'] = (time.time() - iteration_start_time)
                     training_stats.update_iter_stats(loss_dict_reduced)
                     training_stats.IterToc()
                     training_stats.log_iter_stats(step//acc_batch, optimizer, max_iters, val_err)
+                    if (step % 10 == 0):
+                        print(
+                            f"Step {step//acc_batch+1}/{max_iters} | "
+                            f"iteration: {durations.get('iteration', 0):.2f}s | "
+                            f"Data loading: {durations.get('data_loading', 0):.5f}s | "
+                            f"To CUDA: {durations.get('to_cuda', 0):.5f}s | "
+                            f"Forward: {durations.get('forward', 0):.2f}s | "
+                            f"zero_grad: {durations.get('zero_grad', 0):.2f}s | "
+                            f"Backward: {durations.get('backward', 0):.2f}s | "
+                            f"lr_schedule: {durations.get('lr_schedule', 0):.5f}s | "
+                            f"clip_grad: {durations.get('clip_grad', 0):.5f}s | "
+                            f"Optimizer: {durations.get('optimizer', 0):.2f}s"
+                        )
 
             # validate the model
                 if cfg.evaluation.online_eval and \

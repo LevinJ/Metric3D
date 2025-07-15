@@ -86,7 +86,7 @@ lr_config = dict(policy='poly',
                  power=0.9, min_lr=1e-8, by_epoch=False)
 
 acc_batch = 1
-batchsize_per_gpu = 4
+batchsize_per_gpu = 2
 thread_per_gpu = 2
 
 KITTI_dataset=dict(
