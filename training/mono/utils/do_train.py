@@ -22,6 +22,7 @@ import numpy as np
 import torch.distributed as dist
 import torch.nn.functional as F
 from contextlib import nullcontext
+import torch.autograd.profiler
 
 def to_cuda(data):
     for k, v in data.items():
@@ -225,7 +226,14 @@ def train_by_iters(cfg, model, optimizer, lr_scheduler, train_dataloader, val_da
             # if step > 100 and step % 10 == 0:
             #     for param in model.parameters():
             #         print(param.grad.max(), torch.norm(param.grad))
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 10)
+            with torch.autograd.profiler.profile(use_cuda=True) as prof:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 10)
+            # Print the profiling results
+            print(prof.key_averages().table(sort_by="cuda_time_total" if torch.cuda.is_available() else "cpu_time_total", row_limit=10))
+
+            # Optionally, export the profiling results to a file for further analysis
+            prof.export_chrome_trace("clip_grad_norm_profile.json")
+
             optimizer.step()
 
             # reduce losses over all GPUs for logging purposes
@@ -258,6 +266,111 @@ def train_by_iters(cfg, model, optimizer, lr_scheduler, train_dataloader, val_da
     except (RuntimeError, KeyboardInterrupt):
         stack_trace = traceback.format_exc()
         print(stack_trace)
+
+import warnings
+from typing import Union, Iterable, List, Dict, Tuple, Optional, cast
+
+import torch
+from torch import Tensor, inf
+from torch.utils._foreach_utils import _group_tensors_by_device_and_dtype, _has_foreach_support
+import time
+
+_tensor_or_tensors = Union[torch.Tensor, Iterable[torch.Tensor]]
+def clip_grad_norm2_(
+        parameters: _tensor_or_tensors, max_norm: float, norm_type: float = 2.0,
+        error_if_nonfinite: bool = False, foreach: Optional[bool] = None) -> Dict[str, Union[torch.Tensor, float]]:
+    r"""Clips gradient norm of an iterable of parameters.
+
+    The norm is computed over all gradients together, as if they were
+    concatenated into a single vector. Gradients are modified in-place.
+
+    Args:
+        parameters (Iterable[Tensor] or Tensor): an iterable of Tensors or a
+            single Tensor that will have gradients normalized
+        max_norm (float): max norm of the gradients
+        norm_type (float): type of the used p-norm. Can be ``'inf'`` for
+            infinity norm.
+        error_if_nonfinite (bool): if True, an error is thrown if the total
+            norm of the gradients from :attr:`parameters` is ``nan``,
+            ``inf``, or ``-inf``. Default: False (will switch to True in the future)
+        foreach (bool): use the faster foreach-based implementation.
+            If ``None``, use the foreach implementation for CUDA and CPU native tensors and silently
+            fall back to the slow implementation for other device types.
+            Default: ``None``
+
+    Returns:
+        A dictionary containing the total norm of the parameter gradients and the durations of each segment.
+    """
+    durations = {}
+
+    start_time = time.time()
+    if isinstance(parameters, torch.Tensor):
+        parameters = [parameters]
+    grads = [p.grad for p in parameters if p.grad is not None]
+    durations['gradient_collection'] = time.time() - start_time
+
+    # Convert max_norm and norm_type to float
+    start_time = time.time()
+    max_norm = float(max_norm)
+    norm_type = float(norm_type)
+    if len(grads) == 0:
+        return {'total_norm': torch.tensor(0.), 'durations': durations}
+    first_device = grads[0].device
+    grouped_grads: Dict[Tuple[torch.device, torch.dtype], List[List[Tensor]]] \
+        = _group_tensors_by_device_and_dtype([[g.detach() for g in grads]])  # type: ignore[assignment]
+    durations['grouping_gradients'] = time.time() - start_time
+
+    # Calculate the norm of the gradients
+    start_time = time.time()
+    if norm_type == inf:
+        norms = [torch.linalg.vector_norm(g.detach(), inf).to(first_device) for g in grads]
+        total_norm = norms[0] if len(norms) == 1 else torch.max(torch.stack(norms))
+    else:
+        norms = []
+        for ((device, _), ([grads], _)) in grouped_grads.items():  # type: ignore[assignment]
+            if (foreach is None or foreach) and _has_foreach_support(grads, device=device):
+                norms.extend(torch._foreach_norm(grads, norm_type))
+            elif foreach:
+                raise RuntimeError(f'foreach=True was passed, but can\'t use the foreach API on {device.type} tensors')
+            else:
+                norms.extend([torch.linalg.vector_norm(g, norm_type) for g in grads])
+
+        total_norm = torch.linalg.vector_norm(torch.stack([norm.to(first_device) for norm in norms]), norm_type)
+    durations['norm_calculation'] = time.time() - start_time
+
+    # Check for non-finite norms
+    start_time = time.time()
+    if error_if_nonfinite and torch.logical_or(total_norm.isnan(), total_norm.isinf()):
+        raise RuntimeError(
+            f'The total norm of order {norm_type} for gradients from '
+            '`parameters` is non-finite, so it cannot be clipped. To disable '
+            'this error and scale the gradients by the non-finite norm anyway, '
+            'set `error_if_nonfinite=False`')
+    durations['error_check'] = time.time() - start_time
+
+    # Calculate the clipping coefficient
+    start_time = time.time()
+    clip_coef = max_norm / (total_norm + 1e-6)
+    # Note: multiplying by the clamped coef is redundant when the coef is clamped to 1, but doing so
+    # avoids a `if clip_coef < 1:` conditional which can require a CPU <=> device synchronization
+    # when the gradients do not reside in CPU memory.
+    clip_coef_clamped = torch.clamp(clip_coef, max=1.0)
+    durations['clipping_coefficient'] = time.time() - start_time
+
+    # Scale the gradients
+    start_time = time.time()
+    for ((device, _), ([grads], _)) in grouped_grads.items():  # type: ignore[assignment]
+        if (foreach is None or foreach) and _has_foreach_support(grads, device=device):  # type: ignore[arg-type]
+            torch._foreach_mul_(grads, clip_coef_clamped.to(device))  # type: ignore[call-overload]
+        elif foreach:
+            raise RuntimeError(f'foreach=True was passed, but can\'t use the foreach API on {device.type} tensors')
+        else:
+            clip_coef_clamped_device = clip_coef_clamped.to(device)
+            for g in grads:
+                g.detach().mul_(clip_coef_clamped_device)
+    durations['gradient_scaling'] = time.time() - start_time
+
+    return {'total_norm': total_norm, 'durations': durations}
 
 def train_by_iters_amp(cfg, model, optimizer, lr_scheduler, train_dataloader, val_dataloader, loss_scaler):
     """
@@ -351,9 +464,10 @@ def train_by_iters_amp(cfg, model, optimizer, lr_scheduler, train_dataloader, va
                 code_start_time = time.time()
                 try:
                     if (step+1-start_iter) % acc_batch == 0:
+                      
                         # torch.nn.utils.clip_grad_norm_(model.parameters(), 2.5, error_if_nonfinite=True)
+                        result_grad_clip = clip_grad_norm2_(model.parameters(), 2.5, norm_type=2.0, error_if_nonfinite=True, foreach=True)
                         durations['clip_grad'] = (time.time() - code_start_time)
-
                         code_start_time = time.time()
                         optimizer.step()
                         durations['optimizer'] = (time.time() - code_start_time)
@@ -386,6 +500,12 @@ def train_by_iters_amp(cfg, model, optimizer, lr_scheduler, train_dataloader, va
                             f"clip_grad: {durations.get('clip_grad', 0):.5f}s | "
                             f"Optimizer: {durations.get('optimizer', 0):.2f}s"
                         )
+
+                        if result_grad_clip is not None:
+                            print(
+                                f"  Grad Clip: total_norm={result_grad_clip.get('total_norm', 'N/A'):.4f} | "
+                                + " | ".join([f"{k}: {v:.5f}s" for k, v in result_grad_clip.get('durations', {}).items()])
+                            )
 
             # validate the model
                 if cfg.evaluation.online_eval and \
@@ -564,5 +684,4 @@ def set_random_crop_size_for_iter(dataloader: torch.utils.data.dataloader.DataLo
             dataloader.dataset.datasets[i].datasets[j].set_random_crop_size(crop_size)
     return crop_size
 
-    
-    
+
