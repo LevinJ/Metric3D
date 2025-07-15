@@ -305,6 +305,10 @@ def clip_grad_norm2_(
 
     start_time = time.time()
     torch.cuda.synchronize() 
+    durations['sync_gpu'] = time.time() - start_time
+
+    start_time = time.time()
+    torch.cuda.synchronize() 
     if isinstance(parameters, torch.Tensor):
         parameters = [parameters]
     grads = [p.grad for p in parameters if p.grad is not None]
