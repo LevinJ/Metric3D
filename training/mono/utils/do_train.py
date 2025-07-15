@@ -304,13 +304,16 @@ def clip_grad_norm2_(
     durations = {}
 
     start_time = time.time()
+    torch.cuda.synchronize() 
     if isinstance(parameters, torch.Tensor):
         parameters = [parameters]
     grads = [p.grad for p in parameters if p.grad is not None]
+    torch.cuda.synchronize() 
     durations['gradient_collection'] = time.time() - start_time
 
     # Convert max_norm and norm_type to float
     start_time = time.time()
+    torch.cuda.synchronize() 
     max_norm = float(max_norm)
     norm_type = float(norm_type)
     if len(grads) == 0:
@@ -318,10 +321,12 @@ def clip_grad_norm2_(
     first_device = grads[0].device
     grouped_grads: Dict[Tuple[torch.device, torch.dtype], List[List[Tensor]]] \
         = _group_tensors_by_device_and_dtype([[g.detach() for g in grads]])  # type: ignore[assignment]
+    torch.cuda.synchronize() 
     durations['grouping_gradients'] = time.time() - start_time
 
     # Calculate the norm of the gradients
     start_time = time.time()
+    torch.cuda.synchronize() 
     if norm_type == inf:
         norms = [torch.linalg.vector_norm(g.detach(), inf).to(first_device) for g in grads]
         total_norm = norms[0] if len(norms) == 1 else torch.max(torch.stack(norms))
@@ -336,6 +341,7 @@ def clip_grad_norm2_(
                 norms.extend([torch.linalg.vector_norm(g, norm_type) for g in grads])
 
         total_norm = torch.linalg.vector_norm(torch.stack([norm.to(first_device) for norm in norms]), norm_type)
+    torch.cuda.synchronize() 
     durations['norm_calculation'] = time.time() - start_time
 
     # Check for non-finite norms
