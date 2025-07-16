@@ -304,20 +304,20 @@ def clip_grad_norm2_(
     durations = {}
 
     start_time = time.time()
-    torch.cuda.synchronize() 
+    # torch.cuda.synchronize() 
     durations['sync_gpu'] = time.time() - start_time
 
     start_time = time.time()
-    torch.cuda.synchronize() 
+    # torch.cuda.synchronize() 
     if isinstance(parameters, torch.Tensor):
         parameters = [parameters]
     grads = [p.grad for p in parameters if p.grad is not None]
-    torch.cuda.synchronize() 
+    # torch.cuda.synchronize() 
     durations['gradient_collection'] = time.time() - start_time
 
     # Convert max_norm and norm_type to float
     start_time = time.time()
-    torch.cuda.synchronize() 
+    # torch.cuda.synchronize() 
     max_norm = float(max_norm)
     norm_type = float(norm_type)
     if len(grads) == 0:
@@ -325,12 +325,12 @@ def clip_grad_norm2_(
     first_device = grads[0].device
     grouped_grads: Dict[Tuple[torch.device, torch.dtype], List[List[Tensor]]] \
         = _group_tensors_by_device_and_dtype([[g.detach() for g in grads]])  # type: ignore[assignment]
-    torch.cuda.synchronize() 
+    # torch.cuda.synchronize() 
     durations['grouping_gradients'] = time.time() - start_time
 
     # Calculate the norm of the gradients
     start_time = time.time()
-    torch.cuda.synchronize() 
+    # torch.cuda.synchronize() 
     if norm_type == inf:
         norms = [torch.linalg.vector_norm(g.detach(), inf).to(first_device) for g in grads]
         total_norm = norms[0] if len(norms) == 1 else torch.max(torch.stack(norms))
@@ -345,7 +345,7 @@ def clip_grad_norm2_(
                 norms.extend([torch.linalg.vector_norm(g, norm_type) for g in grads])
 
         total_norm = torch.linalg.vector_norm(torch.stack([norm.to(first_device) for norm in norms]), norm_type)
-    torch.cuda.synchronize() 
+    # torch.cuda.synchronize() 
     durations['norm_calculation'] = time.time() - start_time
 
     # Check for non-finite norms
@@ -429,11 +429,12 @@ def train_by_iters_amp(cfg, model, optimizer, lr_scheduler, train_dataloader, va
         # while True:
             durations = {}
             import time
+            iteration_start_time = time.time()
             if main_process():
                 training_stats.IterTic()
 
             # get the data batch
-            iteration_start_time = time.time()
+            
             code_start_time = time.time()
             try:
                 data = next(dataloader_iterator)
@@ -455,13 +456,13 @@ def train_by_iters_amp(cfg, model, optimizer, lr_scheduler, train_dataloader, va
             code_start_time = time.time()
             with torch.cuda.amp.autocast(dtype=torch.bfloat16):
                 pred_depth, losses_dict, conf = model(data)
-            
+            durations['forward'] = (time.time() - code_start_time)
+            code_start_time = time.time()
             total_loss = losses_dict['total_loss'] / acc_batch
-
             if not math.isfinite(total_loss):
                 logger.info("Loss is {}, skiping this batch training".format(total_loss))
                 continue
-            durations['forward'] = (time.time() - code_start_time)
+            durations['loss_check'] = (time.time() - code_start_time)
             # optimize, backward
             code_start_time = time.time()
             if (step+1-start_iter) % acc_batch == 0:
@@ -474,9 +475,9 @@ def train_by_iters_amp(cfg, model, optimizer, lr_scheduler, train_dataloader, va
                 code_start_time = time.time()
                 try:
                     if (step+1-start_iter) % acc_batch == 0:
-                      
-                        # torch.nn.utils.clip_grad_norm_(model.parameters(), 2.5, error_if_nonfinite=True)
-                        result_grad_clip = clip_grad_norm2_(model.parameters(), 2.5, norm_type=2.0, error_if_nonfinite=True, foreach=True)
+                        result_grad_clip = None
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), 2.5, error_if_nonfinite=True)
+                        # result_grad_clip = clip_grad_norm2_(model.parameters(), 2.5, norm_type=2.0, error_if_nonfinite=False, foreach=True)
                         durations['clip_grad'] = (time.time() - code_start_time)
                         code_start_time = time.time()
                         optimizer.step()
@@ -493,9 +494,11 @@ def train_by_iters_amp(cfg, model, optimizer, lr_scheduler, train_dataloader, va
                 lr_scheduler.after_train_iter(optimizer)
                 durations['lr_schedule'] = (time.time() - code_start_time)
                 if main_process():
-                    durations['iteration'] = (time.time() - iteration_start_time)
+                    code_start_time = time.time()
                     training_stats.update_iter_stats(loss_dict_reduced)
+                    durations['update_iter_stats'] = (time.time() - code_start_time)
                     training_stats.IterToc()
+                    durations['iteration'] = (time.time() - iteration_start_time)
                     training_stats.log_iter_stats(step//acc_batch, optimizer, max_iters, val_err)
                     if (step % 10 == 0):
                         print(
@@ -504,9 +507,11 @@ def train_by_iters_amp(cfg, model, optimizer, lr_scheduler, train_dataloader, va
                             f"Data loading: {durations.get('data_loading', 0):.5f}s | "
                             f"To CUDA: {durations.get('to_cuda', 0):.5f}s | "
                             f"Forward: {durations.get('forward', 0):.2f}s | "
+                            f"loss_check: {durations.get('loss_check', 0):.2f}s | "
                             f"zero_grad: {durations.get('zero_grad', 0):.2f}s | "
                             f"Backward: {durations.get('backward', 0):.2f}s | "
                             f"lr_schedule: {durations.get('lr_schedule', 0):.5f}s | "
+                            f"update_iter_stats: {durations.get('update_iter_stats', 0):.5f}s | "
                             f"clip_grad: {durations.get('clip_grad', 0):.5f}s | "
                             f"Optimizer: {durations.get('optimizer', 0):.2f}s"
                         )
