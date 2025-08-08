@@ -69,7 +69,7 @@ evaluation = dict(
 
 # save checkpoint during training, with '*_AMP' is employing the automatic mix precision training
 checkpoint_config = dict(by_epoch=False, interval=10 *1000 * 2)
-runner = dict(type='IterBasedRunner_AMP', max_iters=10 * 1000 * 80)
+runner = dict(type='IterBasedRunner_AMP', max_iters=10 * 1000 * 4)
 
 # optimizer
 optimizer = dict(

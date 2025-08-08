@@ -393,6 +393,10 @@ class BaseDataset(Dataset):
         curr_intrinsic = meta_data['cam_in']
         # load rgb/depth
         curr_rgb, curr_depth = self.load_rgb_depth(data_path['rgb_path'], data_path['depth_path'])
+        #crop just for front wide camera
+        crop_size = 840
+        curr_rgb = curr_rgb[:crop_size]
+        curr_depth = curr_depth[:crop_size]/meta_data['depth_scale']
         # get semantic labels
         curr_sem = self.load_sem_label(data_path['sem_path'], curr_depth)
         # create camera model

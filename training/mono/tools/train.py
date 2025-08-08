@@ -194,11 +194,11 @@ def main(args):
         cfg['KITTI_dataset'].zed_camera = True
         cfg['KITTI_dataset'].metric_scale = 1.0
         cfg.db_info['KITTI'] = {
-                            'db_root': '/media/levin/DATA/nerf/new_es8/stereo/annotations',
+                            'db_root': '/media/levin/DATA/nerf/new_es8/es81_fisheye_front/annotation',
                             'data_root': '',
                             'train_annotations_path': 'merged_zed_annotation.json',
-                            'test_annotations_path': 'merged_zed_annotation_eval.json',
-                            'val_annotations_path': 'merged_zed_annotation_eval.json',
+                            'test_annotations_path': 'merged_zed_annotation.json',
+                            'val_annotations_path': 'merged_zed_annotation.json',
                         }
     
     #for ZED stereo camera, lidar ground truth
